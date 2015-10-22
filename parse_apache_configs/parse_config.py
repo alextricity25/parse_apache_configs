@@ -1,53 +1,48 @@
 import os
 from pyparsing import *
 
-
-
 # For tags that have an argument in the form of
 # a conditional expression. The reason this is done
 # is so that a tag with the ">" operator in the
 # arguments will parse correctly.
-OPERAND = Word(alphanums + ".")
-OPERATOR = oneOf(["<=", ">=", "==", "!=", "<", ">"], useRegex=False)
+OPERAND = Word(alphanums + "." + '"' + '/-')
+OPERATOR = oneOf(["<=", ">=", "==", "!=", "<", ">", "~"], useRegex=False)
 EXPRESSION_TAG = Group(OPERAND + OPERATOR + OPERAND)
 
 # LITERAL_TAG will match tags that do not have
 # a conditional expression. So any other tag
 # with arguments that don't contain OPERATORs
-LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/'))
+LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-'))
 
 # Will match the start of any tag
-TAG_START_GRAMMAR = Literal("<") + (EXPRESSION_TAG|LITERAL_TAG) + Literal(">") + LineEnd()
+TAG_START_GRAMMAR = Group(Literal("<") + (EXPRESSION_TAG|LITERAL_TAG) + Literal(">") + LineEnd())
 
 # Will match the end of any tag
-TAG_END_GRAMMAR = Literal("</") + LITERAL_TAG + Literal(">") + LineEnd()
+TAG_END_GRAMMAR = Group(Literal("</") + LITERAL_TAG + Literal(">") + LineEnd())
 
 # Will match any directive. We are performing
 # a simple parse by matching the directive on
 # the left, and everything else on the right.
-ANY_DIRECTIVE = Word(alphanums) + White() + Word(printables + "     ") + LineEnd()
+ANY_DIRECTIVE = Group(Word(alphanums) + Suppress(White()) + Word(printables + "     ") + LineEnd())
 
-COMMENT = Literal("#") + Word(printables + "    ") + LineEnd()
+COMMENT = Group(Literal("#") + Word(printables + "    ") + LineEnd())
 
-BLANK_LINE = ZeroOrMore(White()) + LineEnd()
+BLANK_LINE = Group(ZeroOrMore(White()) + LineEnd())
 
 #EXPRESSION = COMMENT ^ ANY_DIRECTIVE ^ BLANK_LINE
-
 #BLOCK = TAG_START_GRAMMAR + ZeroOrMore(EXPRESSION) + TAG_END_GRAMMAR
-
-enclosed = Forward()
-BLOCK_CONTENT = Group(OneOrMore(ANY_DIRECTIVE) + ZeroOrMore(BLANK_LINE) + ZeroOrMore(COMMENT))
-
-NESTED_BLOCK = nestedExpr(TAG_START_GRAMMAR, TAG_END_GRAMMAR, content=enclosed)
-enclosed << (BLOCK_CONTENT | NESTED_BLOCK)
-BLOCK_GRAMMAR = enclosed
-
+#BLOCK = TAG_START_GRAMMAR + BLOCK_CONTENT + TAG_END_GRAMMAR
+#NESTED_BLOCK = nestedExpr(TAG_START_GRAMMAR, TAG_END_GRAMMAR, content=enclosed)
+#BLOCK_CONTENT = Forward()
+#BLOCK_CONTENT <<= OneOrMore(ANY_DIRECTIVE) + ZeroOrMore(COMMENT) + ZeroOrMore(nestedExpr(TAG_START_GRAMMAR, TAG_END_GRAMMAR, content=BLOCK_CONTENT))
+#BLOCK_CONTENT <<= OneOrMore(ANY_DIRECTIVE ^ COMMENT ^ nestedExpr(TAG_START_GRAMMAR, TAG_END_GRAMMAR, content=BLOCK_CONTENT))
+#BLOCK_GRAMMAR = nestedExpr(TAG_START_GRAMMAR, TAG_END_GRAMMAR, content=BLOCK_CONTENT)
+#BLOCK_GRAMMAR = Group(TAG_START_GRAMMAR + BLOCK_CONTENT + TAG_END_GRAMMAR)
 #BLOCK_CONTENT_NESTED = ZeroOrMore(ANY_DIRECTIVE) + ZeroOrMore(TAG_START_GRAMMAR) + ZeroOrMore(TAG_END_GRAMMAR) + ZeroOrMore(BLANK_LINE) + ZeroOrMore(COMMENT)
-
 #BLOCK_GRAMMAR = TAG_START_GRAMMAR + BLOCK_CONTENT + TAG_END_GRAMMAR
 
 # A line. Will match every grammar defined above.
-LINE = (TAG_START_GRAMMAR^TAG_END_GRAMMAR^ANY_DIRECTIVE^COMMENT^BLANK_LINE)
+LINE = (TAG_START_GRAMMAR^TAG_END_GRAMMAR^ANY_DIRECTIVE^COMMENT^Suppress(BLANK_LINE))
 
 CONFIG_FILE = OneOrMore(LINE)
 
