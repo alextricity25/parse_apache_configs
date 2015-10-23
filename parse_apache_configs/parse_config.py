@@ -7,7 +7,7 @@ from pyparsing import *
 # arguments will parse correctly.
 OPERAND = Word(alphanums + "." + '"' + '/-')
 OPERATOR = oneOf(["<=", ">=", "==", "!=", "<", ">", "~"], useRegex=False)
-EXPRESSION_TAG = Group(OPERAND + OPERATOR + OPERAND)
+EXPRESSION_TAG = OPERAND + OPERATOR + OPERAND
 
 # LITERAL_TAG will match tags that do not have
 # a conditional expression. So any other tag
@@ -18,7 +18,7 @@ LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-'))
 TAG_START_GRAMMAR = Group(Literal("<") + (EXPRESSION_TAG|LITERAL_TAG) + Literal(">") + LineEnd())
 
 # Will match the end of any tag
-TAG_END_GRAMMAR = Group(Literal("</") + LITERAL_TAG + Literal(">") + LineEnd())
+TAG_END_GRAMMAR = Group(Literal("</") + Word(alphanums) + Literal(">") + LineEnd())
 
 # Will match any directive. We are performing
 # a simple parse by matching the directive on
@@ -42,7 +42,7 @@ BLANK_LINE = Group(ZeroOrMore(White()) + LineEnd())
 #BLOCK_GRAMMAR = TAG_START_GRAMMAR + BLOCK_CONTENT + TAG_END_GRAMMAR
 
 # A line. Will match every grammar defined above.
-LINE = (TAG_START_GRAMMAR^TAG_END_GRAMMAR^ANY_DIRECTIVE^COMMENT^Suppress(BLANK_LINE))
+LINE = (TAG_END_GRAMMAR^TAG_START_GRAMMAR^ANY_DIRECTIVE^COMMENT^Suppress(BLANK_LINE))
 
 CONFIG_FILE = OneOrMore(LINE)
 
@@ -79,3 +79,74 @@ class ParseApacheConfig:
         with open(self.apache_config_path, "r") as config_file:
             for line in config_file:
                 prased_line = LINE.parseString(line)
+
+
+    def _convert_to_dict(self, parsed_result, conf_dict={})
+        """
+        parsed_results should be a list with the entries being
+        a list of the tokenized version of each line
+        """
+#        for tokenized_line in parsed_results:
+#            if _is_open_tag(tokenized_line):
+#                open_tag_string = ",".join(tokenized_line)
+#                apache_conf_dict[open_tag_string] = _convert_to_dict()
+#        if _is_open_tag(parsed_results[0][0]):
+#            open_tag = parsed_results.pop(0)
+#            open_tag_string = ",".join(open_tag)
+#            apache_conf_dict[open_tag_string] = _convert_to_dict(parsed_result, apache_conf_dict[open_tag_string])
+#        else:
+
+        line = parsed_result.pop(0)
+
+        if parsed_result.len == 0:
+            return conf_dict
+
+        line = parsed_result.pop(0)
+
+        if _is_open_tag(line):
+            conf_dict = {}
+            open_tag_string = ",".join(line)
+            conf_dict = dict([(open_tag_string, _convert_to_dict(parsed_result, conf_dict))])
+       
+        if _is_directive(line):
+            key, value = line 
+            conf_dict[key] = value
+            _convert_to_dict(parsed_result, conf_dict)
+
+        #conf_dict is suppose to be growing the deeper we recurse!
+        # THIS NEEDS WORK
+        if _is_close_tag(line):
+            close_tag_string = ",".join(line)
+            conf_dict["close_tag"] = close_tag_string
+            _convert_to_dict(parsed_result, conf_dict)
+            
+            
+                
+            
+
+    def _is_open_tag(tokenized_line):
+        """
+        Returns true if tozenized_line is an apache start tag.
+        """
+        if tokenized_line[0] == '<':
+            return True
+        else:
+            return False
+
+    def _is_directive(tokenized_line):
+        """
+        Return true if tokenized_line is an apache directive.
+        """
+        if tokenized_line[0] != '<':
+            return True
+        else:
+            return False
+
+    def _is_close_tag(tokenized_line):
+        """
+        Returns true if tokenized_line is an apache end tag.
+        """
+        if tokenized_line[0] == '</':
+            return True
+        else:
+            return False

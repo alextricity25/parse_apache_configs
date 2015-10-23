@@ -50,13 +50,7 @@ class testGrammer(unittest.TestCase):
             for line in apache_config:
                 print line
                 print LINE.parseString(line)
-
-    def test_search_string(self):
-        """
-        This method tests pyparsing.ParserElement.searchString.
-        """
-        print "-"*8 + "ENTERING TEST_SEARCH_STRING" + "-"*8
-    
+        
 #    def test_block(self):
 #        print "Entering test_block"
 #        print BLOCK_GRAMMAR
@@ -89,4 +83,4 @@ class testGrammer(unittest.TestCase):
 #            test_file_string = test_file.read()
 #        print test_file_string
 #        print test_file_expression.parseString(test_file_string)
-#        
+#   
