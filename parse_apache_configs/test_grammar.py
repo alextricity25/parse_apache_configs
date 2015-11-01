@@ -31,10 +31,36 @@ class testGrammer(unittest.TestCase):
 #                print LINE.parseString(line)
 
     def test_whole_file(self):
-        print "Entering test_whole_file"
+        print "-"*8 + "Entering test_whole_file" + "-"*8
         print LINE
         print CONFIG_FILE.parseFile("apache_test_config.conf")
+        print CONFIG_FILE.parseFile("nested_tag_example.conf")
 
+    
+#    def test_return_directives(self):
+#        print '-'*8 + "ENTERING TEST_RETURN_DIRECTIVES" + "-"*8
+#        parse_config_object = ParseApacheConfig("apache_test_config.conf")
+#        parsed_result = CONFIG_FILE.parseFile("apache_test_config.conf")
+#        
+#        # Pop until an open tag is reached
+#        while parse_config_object._is_open_tag(parsed_result[0]) == False:
+#            parsed_result.pop(0)
+#        print "TESTING WITH THE " + "".join(parsed_result[0]) + " TAG"
+#        directives_dict = parse_config_object._return_directives(parsed_result)
+#        print directives_dict
+#
+#    def test_return_directives_global(self):
+#        print '_'*8 + "ENTERING TEST_RETURN_DIRECTIVES_GLOBAL" + "-"*8
+#        parse_config_object = ParseApacheConfig("apache_test_config.conf")
+#        parsed_result = CONFIG_FILE.parseFile("apache_test_config.conf")
+#        directives_dict = parse_config_object._return_directives(parsed_result)
+#        print directives_dict
+
+    def test_convert_to_dict(self):
+        print "-"*8 + "ENTERING TEST_CONVERT_TO_DICT" + "-"*8
+        parse_config_object = ParseApacheConfig("apache_test_config.conf")
+        parsed_result = CONFIG_FILE.parseFile("apache_test_config.conf")
+        print parse_config_object._convert_to_dict(parsed_result)
 
 
     def test_line_by_line(self):
