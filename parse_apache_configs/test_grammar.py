@@ -1,4 +1,5 @@
 import unittest
+import pprint
 from parse_config import *
 from pyparsing import *
 
@@ -13,12 +14,12 @@ class testGrammer(unittest.TestCase):
         #line4 = '    <Location ~ "/v3/auth/OS-FEDERATION/websso/oidc">'
         comment = "#This is a comment"
         comment2 = "# This is a test comment with space"
-        print LINE.parseString(line)
-        print LINE.parseString(line2)
-        print LINE.parseString(line3)
-        #print LINE.parseString(line4)
-        print LINE.parseString(comment)
-        print LINE.parseString(comment2)
+#        print LINE.parseString(line)
+#        print LINE.parseString(line2)
+#        print LINE.parseString(line3)
+#        #print LINE.parseString(line4)
+#        print LINE.parseString(comment)
+#        print LINE.parseString(comment2)
 
 
 #    def test_grammars(self):
@@ -32,9 +33,9 @@ class testGrammer(unittest.TestCase):
 
     def test_whole_file(self):
         print "-"*8 + "Entering test_whole_file" + "-"*8
-        print LINE
-        print CONFIG_FILE.parseFile("apache_test_config.conf")
-        print CONFIG_FILE.parseFile("nested_tag_example.conf")
+        #print LINE
+        CONFIG_FILE.parseFile("apache_test_config.conf")
+        #print CONFIG_FILE.parseFile("nested_tag_example.conf")
 
     
 #    def test_return_directives(self):
@@ -59,8 +60,10 @@ class testGrammer(unittest.TestCase):
     def test_convert_to_dict(self):
         print "-"*8 + "ENTERING TEST_CONVERT_TO_DICT" + "-"*8
         parse_config_object = ParseApacheConfig("apache_test_config.conf")
-        parsed_result = CONFIG_FILE.parseFile("apache_test_config.conf")
-        print parse_config_object._convert_to_dict(parsed_result)
+        pp = pprint.PrettyPrinter(indent=4)
+        conf_tree, conf_dict = parse_config_object.parse_config()
+        #pp.pprint(parse_config_object.parse_config())
+        pp.pprint(conf_dict)
 
 
     def test_line_by_line(self):
@@ -74,39 +77,5 @@ class testGrammer(unittest.TestCase):
         #print LINE
         with open("apache_test_config.conf", "r") as apache_config:
             for line in apache_config:
-                print line
+                #print line
                 print LINE.parseString(line)
-        
-#    def test_block(self):
-#        print "Entering test_block"
-#        print BLOCK_GRAMMAR
-#        with open("block_test.conf") as block_file:
-#            blockfile = block_file.read()
-#        print blockfile
-#        print BLOCK_GRAMMAR.parseString(blockfile)
-#
-#    def test_nested_block(self):
-#        print "Entering test_netsted_block"
-#        print BLOCK_GRAMMAR
-#        with open("nested_block_test.conf") as block_file:
-#            blockfile = block_file.read()
-#        print blockfile
-#        print BLOCK_GRAMMAR.parseString(blockfile)
-#
-#    def test_documentroot_tag(self):
-#        print "Entering test_documentroot_tag------------------"
-#        with open("documentroot_tag_test.conf") as block_file:
-#            blockfile = block_file.read()
-#        print blockfile
-#        print BLOCK_GRAMMAR.parseString(blockfile)
-#
-#    def test_nested_exprs(self):
-#        content_expression = ZeroOrMore(Word(alphanums))
-#        test_file_expression = nestedExpr('(\n',')\n', content=content_expression)
-#        print "--------ENTERING TEST_NESTED_EXPRS---------"
-#        print test_file_expression
-#        with open("test_nested_parenths.test") as test_file:
-#            test_file_string = test_file.read()
-#        print test_file_string
-#        print test_file_expression.parseString(test_file_string)
-#   

@@ -1,7 +1,9 @@
 import os
+import json
 import pprint
 from pyparsing import *
 from treelib import *
+import collections
 
 # For tags that have an argument in the form of
 # a conditional expression. The reason this is done
@@ -59,49 +61,12 @@ class ParseApacheConfig:
         """
   
         # Reading in the config line by line.
-        with open(self.apache_config_path, "r") as config_file:
-            for line in config_file:
-                prased_line = LINE.parseString(line)
-
-
-#    def _convert_to_dict(self, parsed_result, conf_dict={}, directives={})
-#        """
-#        parsed_results should be a list with the entries being
-#        a list of the tokenized version of each line
-#        """
-##        for tokenized_line in parsed_results:
-##            if _is_open_tag(tokenized_line):
-##                open_tag_string = ",".join(tokenized_line)
-##                apache_conf_dict[open_tag_string] = _convert_to_dict()
-##        if _is_open_tag(parsed_results[0][0]):
-##            open_tag = parsed_results.pop(0)
-##            open_tag_string = ",".join(open_tag)
-##            apache_conf_dict[open_tag_string] = _convert_to_dict(parsed_result, apache_conf_dict[open_tag_string])
-##        else:
-#
-#        line = parsed_result.pop(0)
-#
-#        if parsed_result.len == 0:
-#            return conf_dict
-#
-#        line = parsed_result.pop(0)
-#
-#        if _is_open_tag(line):
-#            conf_dict = {}
-#            open_tag_string = ",".join(line)
-#            conf_dict = dict([(open_tag_string, _convert_to_dict(parsed_result, conf_dict))])
-#       
-#        if _is_directive(line):
-#            key, value = line 
-#            conf_dict[key] = value
-#            _convert_to_dict(parsed_result, conf_dict)
-#
-#        #conf_dict is suppose to be growing the deeper we recurse!
-#        # THIS NEEDS WORK
-#        if _is_close_tag(line):
-#            close_tag_string = ",".join(line)
-#            conf_dict["close_tag"] = close_tag_string
-#            _convert_to_dict(parsed_result, conf_dict)
+#        with open(self.apache_config_path, "r") as config_file:
+#            for line in config_file:
+#                prased_line = LINE.parseString(line)
+        parsed_result = CONFIG_FILE.parseFile(self.apache_config_path)
+        #conf_tree, conf_dict = self._convert_to_dict(parsed_result)
+        return self._convert_to_dict(parsed_result)
 
     def _convert_to_dict(self, parsed_result):
         """
@@ -111,56 +76,169 @@ class ParseApacheConfig:
         file
         """
 
+        # Initializing variables
+        ## The end result dictionary. This is a python dictionary representation
+        ## of the apache configu file according to our specifications (TODO: Write
+        ## specifications).
         conf_dict = {}
 
-        base_stack_node = {"base": {}}
+        ## The root node of the the tree as defined by the specifications.
+        base_stack_node = collections.OrderedDict({"base": {}, "identifier": 0})
+        #base_stack_node = {"base": {}, "identifier": 0}
+
+        ## The 'base' tag defines any global directives that are not in a tag.
+        ## This variable keep track of the tag we are iterating through
         open_tag_string = "base"
+
+        ## The Tree data structure as defined by the treelib library
         conf_tree = Tree()
-        # The root of the tree
-        conf_tree.create_node(base_stack_node.keys()[0], base_stack_node.keys()[0], data = base_stack_node[base_stack_node.keys()[0]])
+
+        ## The root of the tree. Has an identifier of 0, with the tag 'base'.
+        conf_tree.create_node(base_stack_node.keys()[0], 0, data = base_stack_node['base'])
+
+        ## Pretty print object
         pp = pprint.PrettyPrinter(indent=4)
+
+        ## The stack representation of the apache config file.
+        ## Each time we encounter a new tag, a dictionary representation of
+        ## the tag and it's contents will be pushed onto the stack.
         parsed_result_stack = [base_stack_node]
-        directive_dict = {}
+
+        ## Identifier for identifying tree nodes
+        identifier = 1
 
         for tokenized_line in parsed_result:
-            print tokenized_line
 
             if self._is_open_tag(tokenized_line):
-                print " ".join(tokenized_line) + " IS OPEN TAG"
+                #print " ".join(tokenized_line) + " IS OPEN TAG"
                 open_tag_string = " ".join(tokenized_line)
-                tag_stack_dict = {open_tag_string: {}}
+                #tag_stack_dict = {open_tag_string: {}, 'identifier': identifier}
+                tag_stack_dict = collections.OrderedDict({open_tag_string: {}})
+                tag_stack_dict['identifier'] = identifier
                 parsed_result_stack.append(tag_stack_dict)
                 # Create Tree Node
                 # TODO: Tree nodes can't have the same ID, so if the same tag is somewhere else
                 # in the config it will break. We need to figure out a way to come up with
                 # unique IDs
-                conf_tree.create_node(open_tag_string, open_tag_string, data={}, parent = parsed_result_stack[-2].keys()[0])
+                # We can have a unique numerical identifier that increments each time
+                # a tag is reached. We will have to maintain this value in the stack as well.
+                #parent_tag = parsed_result_stack[-2].keys()[0]
+                #identifier = parent_tag + open_tag_string
+
+                # Creating a tree node for the open tag. Each open tag will have it's own tree
+                # node with the directives as the data. Initially, the data will be empty.
+                conf_tree.create_node(open_tag_string, identifier, data={}, parent = parsed_result_stack[-2]['identifier'])
+                identifier += 1
                
             elif self._is_directive(tokenized_line):
-                print " ".join(tokenized_line) + " IS DIRECTIVE"
                 key, value = tokenized_line[0:2]
-                print "KEY: " + key
-                print "VALUE: " + value
-                print "PARSED_RESULT_STACK: "
                 parsed_result_stack[-1][parsed_result_stack[-1].keys()[0]][key] = value
-                #print parsed_result_stack
-                pp.pprint(parsed_result_stack)
                 
-
             elif self._is_close_tag(tokenized_line) and len(parsed_result_stack) != 1:
-                print "IS CLOSE TAG"
                 block_dict = parsed_result_stack.pop()
-                #conf_tree.create_node(block_dict.keys()[0], block_dict.keys()[0], parent=parsed_result_stack[-1].keys()[0],data= block_dict)
+                # Building out the tree node data
+                conf_tree.get_node(block_dict['identifier']).data = block_dict[block_dict.keys()[0]]
 
-                # Building out the tree
-                conf_tree.get_node(block_dict.keys()[0]).data = block_dict[block_dict.keys()[0]]
-                #conf_dict[open_tag_string] = block_dict[open_tag_string]
-                #conf_tree.create_node(open_tag_string, open_tag_string, parent=parsed_result_stack[-1].keys()[0])
+        json_string = conf_tree.to_json(with_data=True)
+        conf_dict = json.loads(json_string)
+        return (conf_tree, conf_dict)
 
-        conf_dict["base"] = parsed_result_stack[0]["base"]
 
-        return conf_dict
-                 
+    def to_apache_config(self, conf_tree, output_config_path):
+        """
+        Takes in a Tree object representation of an apache config
+        file and outputs an apache config to the specified file
+
+        IDEA 1: Take in a tree, traverse it using depth traversing method
+        while building out the text manually. I can use the node's level to figure out
+        indentation.
+        """
+
+        level = 0
+
+        # A dict for keeping track of closed tags
+        closed_tags_dict = self._init_closed_tags_dict(conf_tree)
+        for node in conf_tree.expand_tree(mode=Tree.DEPTH):
+            level = self._find_level_of_node(conf_tree, node)
+            #print "LEVEL of " + str(node) + ": " + str(level)
+            # indentation, handled in multiples of 4 in apache.
+            indentation = " " * (4*level)
+            # The tag is not indented to align with the directives
+            tag_indentation = " " * (4*(level-1))
+            if conf_tree[node].tag == 'base':
+                for directive, arguments in conf_tree[node].data.iteritems():
+                    print directive + " " + arguments
+            else:
+                print tag_indentation + conf_tree[node].tag 
+                for directive, arguments in conf_tree[node].data.iteritems():
+                    print indentation + directive + " " + arguments
+                #if conf_tree[node].is_leaf():
+                if conf_tree[node].is_leaf():
+                    closed_tags_dict[node] = True
+                    tag_name = self._get_tag_name(conf_tree[node].tag)
+                    print tag_indentation + "</" + tag_name + ">"
+
+                    # Resure up
+                    parent = conf_tree[node].bpointer
+                    while parent != None:
+                        # The base directives do not belong to a tag
+                        if conf_tree[parent].tag == 'base':
+                            break
+                        if self._can_close(conf_tree, conf_tree[parent], closed_tags_dict):
+                            closed_tags_dict[parent] = True
+                            tag_name = self._get_tag_name(conf_tree[parent].tag)
+                            level = self._find_level_of_node(conf_tree, parent)
+                            tag_indentation = " " * (4*(level-1))
+                            print tag_indentation + "</" + tag_name + ">"
+                            parent = conf_tree[parent].bpointer
+                        else:
+                            break
+                        
+    def _init_closed_tags_dict(self, conf_tree):
+        closed_tags_dict = {}
+        for node in conf_tree.expand_tree(mode=Tree.DEPTH):
+            closed_tags_dict[node] = False
+        return closed_tags_dict
+             
+
+    def _get_tag_name(self, string):
+        tokenized_tag = self._tokenize_string(string)
+        #print tokenized_tag
+        if self._is_open_tag(tokenized_tag):
+            return tokenized_tag[1]
+        else:
+            raise Exception("There is a bug in the code! The tree was not built correctly.")
+
+    def _can_close(self, conf_tree, node_object, closed_tags_dict):
+        if node_object.is_leaf():
+            return True
+        elif self._children_are_closed(node_object, closed_tags_dict):
+            return True
+        else:
+            return False
+
+    def _children_are_closed(self, node_object, closed_tags_dict):
+        for node in node_object.fpointer:
+            if closed_tags_dict[node] == False:
+                return False
+        # All children are closed
+        return True
+
+    def _find_level_of_node(self, conf_tree, node, level=0):
+        #print level
+        #print "CURRENTLY LEVEL IS: " + str(level)
+        if conf_tree[node].bpointer == None:
+            #print "RETURNING: " + str(level)
+            return level
+        else:
+            level += 1
+            level = self._find_level_of_node(conf_tree, conf_tree[node].bpointer, level)
+        return level
+            
+    def _tokenize_string(self, string):
+        line_expr = ungroup(LINE)
+        return line_expr.parseString(string)
+             
             
 #    def _build_tree_root_node(conf_tree, parsed_result):
 #        directive_dict = _return_directives(parsed_result)
