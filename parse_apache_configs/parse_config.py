@@ -11,12 +11,12 @@ import collections
 # arguments will parse correctly.
 OPERAND = Word(alphanums + "." + '"' + '/-')
 OPERATOR = oneOf(["<=", ">=", "==", "!=", "<", ">", "~"], useRegex=False)
-EXPRESSION_TAG = OPERAND + OPERATOR + OPERAND
+EXPRESSION_TAG = OPERAND + White() + OPERATOR + White() + OPERAND
 
 # LITERAL_TAG will match tags that do not have
 # a conditional expression. So any other tag
 # with arguments that don't contain OPERATORs
-LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-' + '.'))
+LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-' + '.' + " "))
 
 # Will match the start of any tag
 TAG_START_GRAMMAR = Group(Literal("<") + (EXPRESSION_TAG|LITERAL_TAG) + Literal(">") + LineEnd())
@@ -111,7 +111,7 @@ class ParseApacheConfig:
 
             if self._is_open_tag(tokenized_line):
                 #print " ".join(tokenized_line) + " IS OPEN TAG"
-                open_tag_string = " ".join(tokenized_line)
+                open_tag_string = "".join(tokenized_line)
                 #tag_stack_dict = {open_tag_string: {}, 'identifier': identifier}
                 tag_stack_dict = collections.OrderedDict({open_tag_string: {}})
                 tag_stack_dict['identifier'] = identifier
@@ -148,16 +148,14 @@ class ParseApacheConfig:
         """
         Takes in a Tree object representation of an apache config
         file and outputs an apache config to the specified file
-
-        IDEA 1: Take in a tree, traverse it using depth traversing method
-        while building out the text manually. I can use the node's level to figure out
-        indentation.
         """
 
+        # Variables
+        ## To keep track of the level a node is in
         level = 0
-
-        # A dict for keeping track of closed tags
+        ## A dict for keeping track of closed tags
         closed_tags_dict = self._init_closed_tags_dict(conf_tree)
+
         for node in conf_tree.expand_tree(mode=Tree.DEPTH):
             level = self._find_level_of_node(conf_tree, node)
             #print "LEVEL of " + str(node) + ": " + str(level)
