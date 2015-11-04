@@ -116,14 +116,6 @@ class ParseApacheConfig:
                 tag_stack_dict = collections.OrderedDict({open_tag_string: {}})
                 tag_stack_dict['identifier'] = identifier
                 parsed_result_stack.append(tag_stack_dict)
-                # Create Tree Node
-                # TODO: Tree nodes can't have the same ID, so if the same tag is somewhere else
-                # in the config it will break. We need to figure out a way to come up with
-                # unique IDs
-                # We can have a unique numerical identifier that increments each time
-                # a tag is reached. We will have to maintain this value in the stack as well.
-                #parent_tag = parsed_result_stack[-2].keys()[0]
-                #identifier = parent_tag + open_tag_string
 
                 # Creating a tree node for the open tag. Each open tag will have it's own tree
                 # node with the directives as the data. Initially, the data will be empty.
@@ -164,12 +156,12 @@ class ParseApacheConfig:
             # The tag is not indented to align with the directives
             tag_indentation = " " * (4*(level-1))
             if conf_tree[node].tag == 'base':
-                for directive, arguments in conf_tree[node].data.iteritems():
-                    print directive + " " + arguments
+                for key in sorted(conf_tree[node].data):
+                    print key + " " + conf_tree[node].data[key]
             else:
-                print tag_indentation + conf_tree[node].tag 
-                for directive, arguments in conf_tree[node].data.iteritems():
-                    print indentation + directive + " " + arguments
+                print tag_indentation + conf_tree[node].tag.rstrip()
+                for key in sorted(conf_tree[node].data):
+                    print indentation + key + " " + conf_tree[node].data[key]
                 #if conf_tree[node].is_leaf():
                 if conf_tree[node].is_leaf():
                     closed_tags_dict[node] = True
@@ -192,6 +184,57 @@ class ParseApacheConfig:
                         else:
                             break
                         
+
+    def add_directive(self, conf_tree, *args):
+        """
+        This method will add a directive to the apache config.
+        If the directive already exists, then it will be overwritten
+
+        :param conf_tree: The tree object representation of the conf file.
+        :type conf_tree: ``Tree``
+        :returns: ``Tree`` The modified Tree object with the added directive.
+
+        :param *args: The path of the directive. For example, if you wanted to
+                      add RequireAll yes to the <Directory /> tag inside the 
+                      <VirtualHost *:80> tag the invocation would be:
+                      add_directive(conf_tree, "<VirtualHost *:80>",
+                                    "<Directory />", {"RequireAll": "yes"})
+                      The last argument will always be a dictonary representing
+                      the directivie to be added/overwritten.
+
+        NOTES:
+        * A directive can exists in servral places, how do we check
+          to see what tag the directivie is in?
+        """
+
+        # Variables
+        subtree = conf_tree
+        nid = None
+        if not isinstance(args[-1], dict):
+            raise Exception("The invocation is wrong! The last argument of the invocation" +
+                             " must be a dictionary representation of the directive")
+        else:
+            for tag in args:
+                if isinstance(tag, dict):
+                    # Subtree should just be the tag-node we are interested in now,
+                    # We can proceed with adding the directive.
+                    tag_node_nid = subtree.root
+                    directive, arguments = tag.items()[0]
+                    conf_tree[tag_node_nid].data[directive] = arguments
+                    break
+                else:
+                    # Find the NID tag-node whoes tag is ``tag``
+                    for node in subtree.expand_tree(mode=Tree.DEPTH):
+                        if subtree[node].tag == tag:
+                            # It might be worth while to test for multiple tags to see if they show up.
+                            nid = node
+                    if nid == None:
+                        raise Exception("Could not find the " + tag + " tag.")
+                    else:
+                        subtree = conf_tree.subtree(nid)
+
+        return conf_tree
+                    
     def _init_closed_tags_dict(self, conf_tree):
         closed_tags_dict = {}
         for node in conf_tree.expand_tree(mode=Tree.DEPTH):
@@ -203,7 +246,8 @@ class ParseApacheConfig:
         tokenized_tag = self._tokenize_string(string)
         #print tokenized_tag
         if self._is_open_tag(tokenized_tag):
-            return tokenized_tag[1]
+            tag_name = tokenized_tag[1].split()[0]
+            return tag_name
         else:
             raise Exception("There is a bug in the code! The tree was not built correctly.")
 
