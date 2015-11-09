@@ -140,24 +140,41 @@ class ParseApacheConfig:
 
         stack = []
         stack.append(nested_list_conf)
+        # A dummy nested list so we don't modify the orignal
+        # as we are iterating through the list
         dummy_nested_list_conf = list(nested_list_conf)
+
         # Iterating through the list
         while(len(tag_path) > 0):
 
+            # If we iterate through the entire list and tag_path is still
+            # greater than zero, then the tag is not there.
             if len(dummy_nested_list_conf) == 0:
                 raise Exception("Y U GIVE INCORRECT PATH!?")
 
+            # Pop the first element off the stack
             current = dummy_nested_list_conf.pop(0)
             if isinstance(current, NestedTags):
                 if current.open_tag == tag_path[0]:
                     print "Comparing " + current.open_tag + " to " + tag_path[0]
+                    # We are only conerned with the current block of the config
                     dummy_nested_list_conf = current
                     stack.append(current) 
                     tag_path.pop(0)
 
         directive = Directive(directive_name, directive_arguments)
+        # Checking to see if directive is already there.
+        # If it is, override it.
+        for directive_object in stack[-1]:
+            if not isinstance(directive_object, Directive):
+                continue
+            else:
+                if directive_object.name == directive_name:
+                    directive_object.args = directive_arguments
+                    return nested_list_conf
+        # If we have reached this point, the directive is not in the
+        # config file and we can add it.            
         stack[-1].append(directive)
-        #TODO: DO NOT POP OFF NESTED LIST?
 
         return nested_list_conf
 
