@@ -156,7 +156,6 @@ class ParseApacheConfig:
             current = dummy_nested_list_conf.pop(0)
             if isinstance(current, NestedTags):
                 if current.open_tag == tag_path[0]:
-                    print "Comparing " + current.open_tag + " to " + tag_path[0]
                     # We are only conerned with the current block of the config
                     dummy_nested_list_conf = current
                     stack.append(current) 

@@ -11,4 +11,12 @@ class testParseConfig(unittest.TestCase):
         pp = pprint.pprint
         conf_list = pac.parse_config()
         #print conf_list
-        pp(conf_list)
+        #pp(conf_list)
+        #TODO make sure we get back the right netstedList
+
+    def test_small_example(self):
+        pac = parse_config.ParseApacheConfig("small_apache_config.conf")
+        pp = pprint.pprint
+        conf_list = pac.parse_config()
+        #pp(conf_list)
+        #TODO make sure we get back the right nested list

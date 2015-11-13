@@ -10,4 +10,4 @@ class testGetApacheConfig(unittest.TestCase):
         pp = pprint.pprint
         conf_list = pac.parse_config()
         conf_string = pac.get_apache_config(conf_list)
-        print conf_string
+        #TODO make sure we get the right config file.
