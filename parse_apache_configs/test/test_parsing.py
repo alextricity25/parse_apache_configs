@@ -14,5 +14,60 @@ class TestParsing(unittest.TestCase):
         print "-"*8 + "ENTERING TEST_LINE_BY_LINE" + "-"*8
         with open("apache_test_config.conf", "r") as apache_config:
             for line in apache_config:
-                self.assertTrue(issubclass(type(parse_config.LINE.parseString(line)),
+                # We don't test blank lines
+                parsed_line = parse_config.LINE.parseString(line)
+                if len(parsed_line) == 0:
+                    continue
+                tokenized_line = ungroup(parse_config.LINE).parseString(line)
+                # Test to see that we got pack a  ParseResult's object
+                self.assertTrue(issubclass(type(tokenized_line),
                                 ParseResults))
+                # We also want to check to see if ``line`` is the same after it's been
+                # written back.
+                # These tests check to see if the ParseResults expression match
+                # ``line`` according to how it's written to it's corresponding object
+                # in parse_config.ParseApacheConfig.parse_config()
+                if self._is_directive(tokenized_line):
+                    directive_string_before = line.lstrip()
+                    directive_string_after = tokenized_line[0] + " " + tokenized_line[1] + "\n"
+                    # This ignores any spaces between the directive name and arguments
+                    # TODO: We need to keep this as close to the original as possible.
+                    self.assertIn(tokenized_line[0], line)
+                    self.assertIn(tokenized_line[1], line)
+                    #self.assertEqual(directive_string_before, directive_string_after)
+                elif self._is_open_tag(tokenized_line):
+                    open_tag_before = line.lstrip()
+                    open_tag_after = "".join(tokenized_line)
+                    self.assertEqual(open_tag_before, open_tag_after)
+                elif self._is_close_tag(tokenized_line):
+                    close_tag_before = line.lstrip()
+                    close_tag_after = "</" + tokenized_line[1] + ">" + "\n"
+                    self.assertEqual(close_tag_before, close_tag_after)
+
+
+    def _is_close_tag(self, tokenized_line):
+        """
+        Test to see if tokenized_line is a close_tag
+        """
+        if tokenized_line[0] == '</':
+            return True
+        else:
+            return False
+
+    def _is_open_tag(self, tokenized_line):
+        """
+        Returns true if tokenzied_line is an apache start tag.
+        """
+        if tokenized_line[0] == '<':
+            return True
+        else:
+            return False
+
+    def _is_directive(self, tokenized_line):
+        """
+        Return true if tokenzied_line is an apache directive
+        """
+        if tokenized_line[0] != '<' and tokenized_line[0] !='</' and tokenized_line[0] != '#':
+            return True
+        else:
+            return False
