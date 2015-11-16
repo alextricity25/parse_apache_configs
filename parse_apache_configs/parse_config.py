@@ -50,6 +50,11 @@ class Directive(Node):
         self.args = args
 
 
+class Comment(Node):
+    def __init__(self, comment_string):
+        self.comment_string = comment_string
+
+
 class NestedTags(list):
     def __init__(self, open_tag, close_tag):
         self.open_tag = open_tag
@@ -72,6 +77,8 @@ class ParseApacheConfig:
         """
         
         #parsed_result = CONFIG_FILE.parseFile(self.apache_config_path)
+
+        # This is just a list of the config file lines tokenized
         conf_list = self._return_conf_list()
         #pp = pprint.PrettyPrinter(indent=4)
         #pp.pprint(parsed_result)
@@ -83,6 +90,8 @@ class ParseApacheConfig:
             if self._is_directive(tokenized_line):
                 #print "is directive"
                 config_stack[-1].append(Directive(tokenized_line[0], tokenized_line[1]))
+            elif self._is_comment(tokenized_line):
+                config_stack[-1].append(Comment(" ".join(tokenized_line[1:-1])))
             elif self._is_open_tag(tokenized_line):
                 #print "is open tag"
                 close_tag = self._get_corresponding_close_tag(tokenized_line)
@@ -113,6 +122,10 @@ class ParseApacheConfig:
             current = stack[-1]
             if isinstance(current, Directive):
                 config_string += "\t"*depth + current.name + " " + current.args + "\n"
+                stack.pop()
+                continue
+            if isinstance(current, Comment):
+                config_string += "\t"*depth + "# " + current.comment_string + "\n"
                 stack.pop()
                 continue
         
