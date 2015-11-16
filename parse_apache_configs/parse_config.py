@@ -16,8 +16,8 @@ EXPRESSION_TAG = OPERAND + White() + OPERATOR + White() + OPERAND
 # LITERAL_TAG will match tags that do not have
 # a conditional expression. So any other tag
 # with arguments that don't contain OPERATORs
-LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-' + '.' + " "))
-
+#QUOTED_STRING = QuotedString('"', unquoteResults=False)
+LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-' + '.' + " " + "^" + "_" + "!" + "[]?$" + "'" + '\\'))
 # Will match the start of any tag
 TAG_START_GRAMMAR = Group(Literal("<") + (EXPRESSION_TAG|LITERAL_TAG) + Literal(">") + LineEnd())
 
@@ -29,12 +29,13 @@ TAG_END_GRAMMAR = Group(Literal("</") + Word(alphanums) + Literal(">") + LineEnd
 # the left, and everything else on the right.
 ANY_DIRECTIVE = Group(Word(alphanums) + Suppress(White()) + Word(printables + "     ") + LineEnd())
 
-COMMENT = Group(Literal("#") + Word(printables + "    ") + LineEnd())
 
-BLANK_LINE = Group(ZeroOrMore(White()) + LineEnd())
+COMMENT = Group((Literal("#") + LineEnd()) ^ (Literal("#") + OneOrMore(Word(alphanums + '*:/"-.^\_![]?$%><' + "',|`)(#;}{=@")) + LineEnd()))
+
+BLANK_LINE = Group(LineEnd())
 
 # A line. Will match every grammar defined above.
-LINE = (TAG_END_GRAMMAR^TAG_START_GRAMMAR^ANY_DIRECTIVE^COMMENT^Suppress(BLANK_LINE))
+LINE = (TAG_END_GRAMMAR^TAG_START_GRAMMAR^ANY_DIRECTIVE^COMMENT^BLANK_LINE)
 
 CONFIG_FILE = OneOrMore(LINE)
 
@@ -70,18 +71,26 @@ class ParseApacheConfig:
         a nested list representation of the config file
         """
         
-        parsed_result = CONFIG_FILE.parseFile(self.apache_config_path)
+        #parsed_result = CONFIG_FILE.parseFile(self.apache_config_path)
+        conf_list = self._return_conf_list()
+        #pp = pprint.PrettyPrinter(indent=4)
+        #pp.pprint(parsed_result)
         config_stack = []
         root = RootNode()
         config_stack.append(root)
-        for tokenized_line in parsed_result:
+        for tokenized_line in conf_list:
+            #print tokenized_line
             if self._is_directive(tokenized_line):
+                #print "is directive"
                 config_stack[-1].append(Directive(tokenized_line[0], tokenized_line[1]))
             elif self._is_open_tag(tokenized_line):
+                #print "is open tag"
                 close_tag = self._get_corresponding_close_tag(tokenized_line)
-                open_tag = "".join(tokenized_line)
+                # Take everything from tokenized_line minus the last character (new line).
+                open_tag = "".join(tokenized_line[0:-1])
                 config_stack.append(NestedTags(open_tag, close_tag))
             elif self._is_close_tag(tokenized_line):
+                #print "is close tag"
                 block = config_stack.pop()
                 config_stack[-1].append(block)
                 
@@ -191,10 +200,19 @@ class ParseApacheConfig:
         """
         Return true if tokenized_line is an apache directive.
         """
-        if tokenized_line[0] != '<' and tokenized_line[0] != '</':
-            return True
-        else:
+        #TODO: test against expressions
+        string_line = " ".join(tokenized_line)
+        try:
+            ANY_DIRECTIVE.parseString(string_line)
+        except ParseException:
             return False
+        return True
+#        if (tokenized_line[0] != '<' and tokenized_line[0] != '</'
+#           and tokenized_line[0] != '#'
+#           and tokenized_line[0] != '\n'):
+#            return True
+#        else:
+#            return False
 
     def _is_comment(self, tokenized_line):
         """
@@ -219,7 +237,20 @@ class ParseApacheConfig:
         Return the close tag of tokenized_line
         """
         if self._is_open_tag(tokenized_line):
-            close_tag = "</" + tokenized_line[1] + ">"
+            opentag_list = tokenized_line[1].split(" ")
+            close_tag = "</" + opentag_list[0] + ">"
             return close_tag
         else:
             raise Exception("WHY YOU TRY TO CALL METHOD WITH NO OPEN TAG?!?!")
+
+    def _return_conf_list(self):
+        """
+        Iterates through the apache config file, building a list whoes entries
+        are a tokenized version of each line in the config file.
+        """
+        conf_list = []
+        with open(self.apache_config_path, "r") as apache_config:
+            for line in apache_config:
+                parsed_result_line = ungroup(LINE).parseString(line)
+                conf_list.append(parsed_result_line)
+        return conf_list

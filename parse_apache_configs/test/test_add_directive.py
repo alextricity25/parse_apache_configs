@@ -1,30 +1,39 @@
+from os import listdir
+from os.path import isfile, join
 import unittest
 from parse_apache_configs import parse_config
 
-import pprint
+#import pprint
 
 class testAddDirective(unittest.TestCase):
-    print "ENTERING TEST_ADD_DIRECTIVE" + "-"*8
+    #print "ENTERING TEST_ADD_DIRECTIVE" + "-"*8
 
     def test_add_directive(self):
-        pac = parse_config.ParseApacheConfig("apache_test_config.conf")
-        conf_list = pac.parse_config()
-        conf_list = pac.add_directive(conf_list, "Hey", "I was added", "<VirtualHost *:35357>\n")
-        #TODO Check to see if directive has been added
+        conf_files = [ f for f in listdir("./test_conf_files") if isfile (join("./test_conf_files", f)) ]
+        for conf_file in conf_files:
+            conf_file = "./test_conf_files/" + conf_file
+            pac = parse_config.ParseApacheConfig(conf_file)
+            conf_list = pac.parse_config()
+            #conf_list = pac.add_directive(conf_list, "Hey", "I was added", "<VirtualHost *:35357>\n")
+            #TODO Check to see if directive has been added
 
     def test_add_directive_to_root(self):
-        pac = parse_config.ParseApacheConfig("apache_test_config.conf")
-        conf_list = pac.parse_config()
-        conf_list = pac.add_directive(conf_list, "AddingTo", "Root Does it Work")
-        #TODO Check to see if directive has been added
+        conf_files = [ f for f in listdir("./test_conf_files") if isfile (join("./test_conf_files", f)) ] 
+        for conf_file in conf_files:
+            pac = parse_config.ParseApacheConfig("./test_conf_files/" + conf_file)
+            conf_list = pac.parse_config()
+            conf_list = pac.add_directive(conf_list, "AddingTo", "Root Does it Work")
+            #TODO Check to see if directive has been added
 
     def test_override(self):
-        pac = parse_config.ParseApacheConfig("apache_test_config.conf")
-        conf_list = pac.parse_config()
-        conf_list = pac.add_directive(conf_list, "SomeDirective", "HasBeenOverwritten")
-        duplicate_directive = self._check_for_duplicate(conf_list)
-        self.assertFalse(duplicate_directive)
-        #TODO Check to see the directive was overwritten
+        conf_files = [ f for f in listdir("./test_conf_files") if isfile (join("./test_conf_files", f)) ]
+        for conf_file in conf_files:
+            pac = parse_config.ParseApacheConfig("./test_conf_files/" + conf_file)
+            conf_list = pac.parse_config()
+            conf_list = pac.add_directive(conf_list, "SomeDirective", "HasBeenOverwritten")
+            duplicate_directive = self._check_for_duplicate(conf_list)
+            self.assertFalse(duplicate_directive)
+            #TODO Check to see the directive was overwritten
 
 
     def _check_for_duplicate(self, conf_list):
