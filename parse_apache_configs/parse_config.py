@@ -9,14 +9,13 @@ import collections
 # a conditional expression. The reason this is done
 # is so that a tag with the ">" operator in the
 # arguments will parse correctly.
-OPERAND = Word(alphanums + "." + '"' + '/-')
+OPERAND = Word(alphanums + "." + '"' + '/-' + "*:^_![]?$%@)(#=`" + '\\')
 OPERATOR = oneOf(["<=", ">=", "==", "!=", "<", ">", "~"], useRegex=False)
 EXPRESSION_TAG = OPERAND + White() + OPERATOR + White() + OPERAND
 
 # LITERAL_TAG will match tags that do not have
 # a conditional expression. So any other tag
 # with arguments that don't contain OPERATORs
-#QUOTED_STRING = QuotedString('"', unquoteResults=False)
 LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-' + '.' + " " + "^" + "_" + "!" + "[]?$" + "'" + '\\'))
 # Will match the start of any tag
 TAG_START_GRAMMAR = Group(Literal("<") + (EXPRESSION_TAG|LITERAL_TAG) + Literal(">") + LineEnd())
@@ -30,7 +29,7 @@ TAG_END_GRAMMAR = Group(Literal("</") + Word(alphanums) + Literal(">") + LineEnd
 ANY_DIRECTIVE = Group(Word(alphanums) + Suppress(White()) + Word(printables + "     ") + LineEnd())
 
 
-COMMENT = Group((Literal("#") + LineEnd()) ^ (Literal("#") + OneOrMore(Word(alphanums + '*:/"-.^\_![]?$%><' + "',|`)(#;}{=@")) + LineEnd()))
+COMMENT = Group((Literal("#") + LineEnd()) ^ (Literal("#") + OneOrMore(Word(alphanums + '~*:/"-.^\_![]?$%><' + "',|`)(#;}{=@+")) + LineEnd()))
 
 BLANK_LINE = Group(LineEnd())
 
@@ -53,6 +52,9 @@ class Directive(Node):
 class Comment(Node):
     def __init__(self, comment_string):
         self.comment_string = comment_string
+
+class BlankLine():
+    pass
 
 
 class NestedTags(list):
@@ -92,6 +94,8 @@ class ParseApacheConfig:
                 config_stack[-1].append(Directive(tokenized_line[0], tokenized_line[1]))
             elif self._is_comment(tokenized_line):
                 config_stack[-1].append(Comment(" ".join(tokenized_line[1:-1])))
+            elif self._is_blank_line(tokenized_line):
+                config_stack[-1].append(BlankLine())
             elif self._is_open_tag(tokenized_line):
                 #print "is open tag"
                 close_tag = self._get_corresponding_close_tag(tokenized_line)
@@ -125,7 +129,11 @@ class ParseApacheConfig:
                 stack.pop()
                 continue
             if isinstance(current, Comment):
-                config_string += "\t"*depth + "# " + current.comment_string + "\n"
+                config_string += "\t"*depth + "#" + current.comment_string + "\n"
+                stack.pop()
+                continue
+            if isinstance(current, BlankLine):
+                config_string += "\n"
                 stack.pop()
                 continue
         
@@ -241,6 +249,15 @@ class ParseApacheConfig:
         Returns true if tokenized_line is an apache end tag.
         """
         if tokenized_line[0] == '</':
+            return True
+        else:
+            return False
+    
+    def _is_blank_line(self, tokenized_line):
+        """
+        Return true if tokenized_line is a blank line.
+        """
+        if tokenized_line[0] == '\n':
             return True
         else:
             return False

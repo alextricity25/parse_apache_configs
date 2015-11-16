@@ -11,7 +11,7 @@ class testGetApacheConfig(unittest.TestCase):
         test_files = [ f for f in listdir("./test_conf_files") if isfile(join("./test_conf_files", f)) ]
         for file_name in test_files:
             pac = parse_config.ParseApacheConfig("./test_conf_files/" + file_name)
-            pp = pprint.pprint
+            #pp = pprint.pprint
             conf_list = pac.parse_config()
             conf_string = pac.get_apache_config(conf_list)
             #print conf_string
