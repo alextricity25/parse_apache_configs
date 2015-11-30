@@ -51,7 +51,6 @@ class TestParsing(unittest.TestCase):
                         close_tag_after = "</" + tokenized_line[1] + ">" + "\n"
                         self.assertEqual(close_tag_before, close_tag_after)
 
-
     def _is_close_tag(self, tokenized_line):
         """
         Test to see if tokenized_line is a close_tag
