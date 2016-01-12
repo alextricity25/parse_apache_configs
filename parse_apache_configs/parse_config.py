@@ -2,7 +2,6 @@ import os
 import json
 import pprint
 from pyparsing import *
-from treelib import *
 import collections
 
 # For tags that have an argument in the form of
@@ -69,41 +68,58 @@ class RootNode(list):
 
 
 class ParseApacheConfig:
-    def __init__(self, apache_config_path):
+
+    def __init__(self, apache_config_path='', apache_file_as_string=''):
+        """Initialize the ParseApacheConfig object
+
+        Only one of the two parameters may be given at one time.
+        apache_config_path is the absolute path to the apache config file
+        to be parsed. apache_file_as_string is the file to be parsed, as a
+        string.
+
+        :param apache_config_path: ``string``
+        :param apache_file_as_string: ``string``
+        """
+        #TODO: Write tests for taking the apache file as a string
+        if apache_config_path and apache_file_as_string:
+            raise Exception(
+                "ERROR - Cannot pass an apache config path and the apache "
+                "file as a string."
+            )
+
+        elif not apache_config_path and not apache_file_as_string:
+            raise Exception(
+                "ERROR - Either an apache config file path or the string "
+                "representation of the file must be passed!"
+            )
+
         self.apache_config_path = apache_config_path
+        self.apache_file_as_string = apache_file_as_string
 
     def parse_config(self):
-        """
-        Will read the file line by line and return
-        a nested list representation of the config file
+        """Parse the apache config file and return a list of list representation of the file.
         """
         
         #parsed_result = CONFIG_FILE.parseFile(self.apache_config_path)
 
         # This is just a list of the config file lines tokenized
         conf_list = self._return_conf_list()
-        #pp = pprint.PrettyPrinter(indent=4)
-        #pp.pprint(parsed_result)
         config_stack = []
         root = RootNode()
         config_stack.append(root)
         for tokenized_line in conf_list:
-            #print tokenized_line
             if self._is_directive(tokenized_line):
-                #print "is directive"
                 config_stack[-1].append(Directive(tokenized_line[0], tokenized_line[1]))
             elif self._is_comment(tokenized_line):
                 config_stack[-1].append(Comment(" ".join(tokenized_line[1:-1])))
             elif self._is_blank_line(tokenized_line):
                 config_stack[-1].append(BlankLine())
             elif self._is_open_tag(tokenized_line):
-                #print "is open tag"
                 close_tag = self._get_corresponding_close_tag(tokenized_line)
                 # Take everything from tokenized_line minus the last character (new line).
                 open_tag = "".join(tokenized_line[0:-1])
                 config_stack.append(NestedTags(open_tag, close_tag))
             elif self._is_close_tag(tokenized_line):
-                #print "is close tag"
                 block = config_stack.pop()
                 config_stack[-1].append(block)
                 
@@ -156,8 +172,6 @@ class ParseApacheConfig:
     def add_directive(self, nested_list_conf, directive_name, directive_arguments, *path):
         """
         This method adds/overrides a directivie in the apache config file.
-        Can be used like so:
-        add_directive(nested_list_conf, "<VirtualHost *:5000>", "<IfVersion >= 2.4>", {
         """
         
         # Variables
@@ -185,7 +199,8 @@ class ParseApacheConfig:
             # Pop the first element off the stack
             current = dummy_nested_list_conf.pop(0)
             if isinstance(current, NestedTags):
-                if current.open_tag == tag_path[0]:
+                current_tag = tag_path[0]
+                if current.open_tag.rstrip() == tag_path[0]:
                     # We are only conerned with the current block of the config
                     dummy_nested_list_conf = current
                     stack.append(current) 
@@ -277,10 +292,25 @@ class ParseApacheConfig:
         """
         Iterates through the apache config file, building a list whoes entries
         are a tokenized version of each line in the config file.
+
+        :returns: ``list``
         """
+        # Variables
         conf_list = []
-        with open(self.apache_config_path, "r") as apache_config:
-            for line in apache_config:
+
+        # A file path was given
+        if self.apache_config_path:
+            with open(self.apache_config_path, "r") as apache_config:
+                for line in apache_config:
+                    parsed_result_line = ungroup(LINE).parseString(line)
+                    conf_list.append(parsed_result_line)
+        # The file was given as a string
+        # TODO: Write tests for a file given as a string!
+        elif self.apache_file_as_string:
+            conf_file_line_list = self.apache_file_as_string.split("\n")
+            for line in conf_file_line_list:
+                # Add the delimiter back in
+                line = line + "\n"
                 parsed_result_line = ungroup(LINE).parseString(line)
                 conf_list.append(parsed_result_line)
         return conf_list

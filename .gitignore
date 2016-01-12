@@ -1,2 +1,3 @@
 *.pyc
+venv/
 parse_apache_configs.egg-info

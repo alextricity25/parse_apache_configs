@@ -14,6 +14,8 @@ class testAddDirective(unittest.TestCase):
             conf_file = "./test_conf_files/" + conf_file
             pac = parse_config.ParseApacheConfig(conf_file)
             conf_list = pac.parse_config()
+            #TODO This test will need to be specific to the apache config file
+            # since we need an explicit apache path.
             #conf_list = pac.add_directive(conf_list, "Hey", "I was added", "<VirtualHost *:35357>\n")
             #TODO Check to see if directive has been added
 
