@@ -1,8 +1,5 @@
-import os
-import json
-import pprint
-from pyparsing import *
-import collections
+from pyparsing import Word, oneOf, White, OneOrMore, alphanums, LineEnd, \
+    Group, Suppress, Literal, printables, ParseException, ungroup
 
 # For tags that have an argument in the form of
 # a conditional expression. The reason this is done
@@ -15,27 +12,40 @@ EXPRESSION_TAG = OPERAND + White() + OPERATOR + White() + OPERAND
 # LITERAL_TAG will match tags that do not have
 # a conditional expression. So any other tag
 # with arguments that don't contain OPERATORs
-LITERAL_TAG = OneOrMore(Word(alphanums + '*:' + '/' + '"-' + '.' + " " + "^" + "_" + "!" + "[]?$" + "'" + '\\'))
+LITERAL_TAG = OneOrMore(Word(
+    alphanums + '*:' + '/' + '"-' + '.' + " " + "^" + "_" + "!" + "[]?$"
+    + "'" + '\\'
+))
 # Will match the start of any tag
-TAG_START_GRAMMAR = Group(Literal("<") + (EXPRESSION_TAG|LITERAL_TAG) + Literal(">") + LineEnd())
+TAG_START_GRAMMAR = Group(Literal("<") + (EXPRESSION_TAG | LITERAL_TAG)
+                          + Literal(">") + LineEnd())
 
 # Will match the end of any tag
-TAG_END_GRAMMAR = Group(Literal("</") + Word(alphanums) + Literal(">") + LineEnd())
+TAG_END_GRAMMAR = Group(Literal("</") + Word(alphanums) + Literal(">")
+                        + LineEnd())
 
 # Will match any directive. We are performing
 # a simple parse by matching the directive on
 # the left, and everything else on the right.
-ANY_DIRECTIVE = Group(Word(alphanums) + Suppress(White()) + Word(printables + "     ") + LineEnd())
+ANY_DIRECTIVE = Group(Word(alphanums) + Suppress(White())
+                      + Word(printables + "     ") + LineEnd())
 
 
-COMMENT = Group((Literal("#") + LineEnd()) ^ (Literal("#") + OneOrMore(Word(alphanums + '~*:/"-.^\_![]?$%><' + "',|`)(#;}{=@+")) + LineEnd()))
+COMMENT = Group(
+    (Literal("#") + LineEnd()) ^
+    (Literal("#")
+     + OneOrMore(Word(alphanums + '~*:/"-.^\_![]?$%><' + "',|`)(#;}{=@+"))
+     + LineEnd())
+)
 
 BLANK_LINE = Group(LineEnd())
 
 # A line. Will match every grammar defined above.
-LINE = (TAG_END_GRAMMAR^TAG_START_GRAMMAR^ANY_DIRECTIVE^COMMENT^BLANK_LINE)
+LINE = (TAG_END_GRAMMAR ^ TAG_START_GRAMMAR ^ ANY_DIRECTIVE
+        ^ COMMENT ^ BLANK_LINE)
 
 CONFIG_FILE = OneOrMore(LINE)
+
 
 class Node():
     def __init__(self, index):
@@ -52,6 +62,7 @@ class Comment(Node):
     def __init__(self, comment_string):
         self.comment_string = comment_string
 
+
 class BlankLine():
     pass
 
@@ -64,7 +75,6 @@ class NestedTags(list):
 
 class RootNode(list):
     pass
-
 
 
 class ParseApacheConfig:
@@ -80,7 +90,6 @@ class ParseApacheConfig:
         :param apache_config_path: ``string``
         :param apache_file_as_string: ``string``
         """
-        #TODO: Write tests for taking the apache file as a string
         if apache_config_path and apache_file_as_string:
             raise Exception(
                 "ERROR - Cannot pass an apache config path and the apache "
@@ -97,10 +106,8 @@ class ParseApacheConfig:
         self.apache_file_as_string = apache_file_as_string
 
     def parse_config(self):
-        """Parse the apache config file and return a list of list representation of the file.
+        """Parse the apache config file and return a list representation.
         """
-        
-        #parsed_result = CONFIG_FILE.parseFile(self.apache_config_path)
 
         # This is just a list of the config file lines tokenized
         conf_list = self._return_conf_list()
@@ -109,25 +116,26 @@ class ParseApacheConfig:
         config_stack.append(root)
         for tokenized_line in conf_list:
             if self._is_directive(tokenized_line):
-                config_stack[-1].append(Directive(tokenized_line[0], tokenized_line[1]))
+                config_stack[-1].append(
+                    Directive(tokenized_line[0], tokenized_line[1])
+                )
             elif self._is_comment(tokenized_line):
-                config_stack[-1].append(Comment(" ".join(tokenized_line[1:-1])))
+                config_stack[-1].append(
+                    Comment(" ".join(tokenized_line[1:-1]))
+                )
             elif self._is_blank_line(tokenized_line):
                 config_stack[-1].append(BlankLine())
             elif self._is_open_tag(tokenized_line):
                 close_tag = self._get_corresponding_close_tag(tokenized_line)
-                # Take everything from tokenized_line minus the last character (new line).
+                # Take everything from tokenized_line minus the last
+                # character (new line).
                 open_tag = "".join(tokenized_line[0:-1])
                 config_stack.append(NestedTags(open_tag, close_tag))
             elif self._is_close_tag(tokenized_line):
                 block = config_stack.pop()
                 config_stack[-1].append(block)
-                
-        return config_stack[-1] 
 
-            # If close tag
-            # pop off the stack
-            # append to stack[-1]
+        return config_stack[-1]
 
     def get_apache_config(self, nested_list_conf):
         """
@@ -141,18 +149,20 @@ class ParseApacheConfig:
         while(len(stack) > 0):
             current = stack[-1]
             if isinstance(current, Directive):
-                config_string += "\t"*depth + current.name + " " + current.args + "\n"
+                config_string += "\t"*depth + current.name + " "
+                + current.args + "\n"
                 stack.pop()
                 continue
             if isinstance(current, Comment):
-                config_string += "\t"*depth + "#" + current.comment_string + "\n"
+                config_string += "\t"*depth + "#" + current.comment_string
+                + "\n"
                 stack.pop()
                 continue
             if isinstance(current, BlankLine):
                 config_string += "\n"
                 stack.pop()
                 continue
-        
+
             if hasattr(current, 'should_close'):
                 depth -= 1
                 if isinstance(current, NestedTags):
@@ -168,12 +178,13 @@ class ParseApacheConfig:
             stack.extend(reversed(current))
 
         return config_string
-                
-    def add_directive(self, nested_list_conf, directive_name, directive_arguments, *path):
+
+    def add_directive(self, nested_list_conf, directive_name,
+                      directive_arguments, *path):
         """
         This method adds/overrides a directivie in the apache config file.
         """
-        
+
         # Variables
         if len(path) == 0:
             tag_path = []
@@ -199,11 +210,10 @@ class ParseApacheConfig:
             # Pop the first element off the stack
             current = dummy_nested_list_conf.pop(0)
             if isinstance(current, NestedTags):
-                current_tag = tag_path[0]
                 if current.open_tag.rstrip() == tag_path[0]:
                     # We are only conerned with the current block of the config
                     dummy_nested_list_conf = current
-                    stack.append(current) 
+                    stack.append(current)
                     tag_path.pop(0)
 
         directive = Directive(directive_name, directive_arguments)
@@ -217,11 +227,10 @@ class ParseApacheConfig:
                     directive_object.args = directive_arguments
                     return nested_list_conf
         # If we have reached this point, the directive is not in the
-        # config file and we can add it.            
+        # config file and we can add it.
         stack[-1].append(directive)
 
         return nested_list_conf
-
 
     def _is_open_tag(self, tokenized_line):
         """
@@ -236,19 +245,12 @@ class ParseApacheConfig:
         """
         Return true if tokenized_line is an apache directive.
         """
-        #TODO: test against expressions
         string_line = " ".join(tokenized_line)
         try:
             ANY_DIRECTIVE.parseString(string_line)
         except ParseException:
             return False
         return True
-#        if (tokenized_line[0] != '<' and tokenized_line[0] != '</'
-#           and tokenized_line[0] != '#'
-#           and tokenized_line[0] != '\n'):
-#            return True
-#        else:
-#            return False
 
     def _is_comment(self, tokenized_line):
         """
@@ -267,7 +269,7 @@ class ParseApacheConfig:
             return True
         else:
             return False
-    
+
     def _is_blank_line(self, tokenized_line):
         """
         Return true if tokenized_line is a blank line.
@@ -286,7 +288,7 @@ class ParseApacheConfig:
             close_tag = "</" + opentag_list[0] + ">"
             return close_tag
         else:
-            raise Exception("WHY YOU TRY TO CALL METHOD WITH NO OPEN TAG?!?!")
+            raise Exception("Y U TRY TO CALL METHOD WITH NO OPEN TAG?!?!")
 
     def _return_conf_list(self):
         """
