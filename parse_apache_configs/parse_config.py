@@ -149,13 +149,17 @@ class ParseApacheConfig:
         while(len(stack) > 0):
             current = stack[-1]
             if isinstance(current, Directive):
-                config_string += "\t"*depth + current.name + " "
-                + current.args + "\n"
+                config_string += (
+                    "\t"*depth + current.name + " "
+                    + current.args + "\n"
+                )
                 stack.pop()
                 continue
             if isinstance(current, Comment):
-                config_string += "\t"*depth + "#" + current.comment_string
-                + "\n"
+                config_string += (
+                    "\t"*depth + "#" + current.comment_string
+                    + "\n"
+                )
                 stack.pop()
                 continue
             if isinstance(current, BlankLine):

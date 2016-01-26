@@ -2,6 +2,7 @@ from os import listdir
 from os.path import isfile, join
 import unittest
 from parse_apache_configs import parse_config
+import test_utils
 
 #import pprint
 
@@ -13,9 +14,14 @@ class testAddDirective(unittest.TestCase):
         for conf_file in conf_files:
             conf_file = "./test_conf_files/" + conf_file
             pac = parse_config.ParseApacheConfig(conf_file)
+
+            tag_path = test_utils.generate_random_path(apache_file_path=conf_file)
             conf_list = pac.parse_config()
+
+            conf_list = pac.add_directive(conf_list, "SomeRandomDirective", "Some +ARGS", *tag_path)
             #TODO This test will need to be specific to the apache config file
-            # since we need an explicit apache path.
+            # since we need an explicit apache path. Or we could pick a random
+            # tag from the file and use that to add a directive
             #conf_list = pac.add_directive(conf_list, "Hey", "I was added", "<VirtualHost *:35357>\n")
             #TODO Check to see if directive has been added
 
