@@ -12,21 +12,33 @@ This will then allow the configs to be manipulated programatically.
 Main Functions
 ==============
 
-To use::
-  import parse_apache_configs import parse_config
+To use:
 
-Parse the apache config via file path, and return a python object representation::
-  apache_parse_obj = parse_config.ParseApacheConfig(apache_config_path="/some/path/to/file")
-  apache_config = apache_parse_obj.parse_config()
+.. code-block:: python
+  
+    import parse_apache_configs import parse_config
 
-or to parse the apache config as a string::
-  apache_parse_obj = parse_config.ParseApacheConfig(apache_file_as_string=apache_string_obj)
-  apache_config = apache_parse_obj.parse_config()
+Parse the apache config via file path, and return a python object representation:
+
+.. code-block:: python
+
+    apache_parse_obj = parse_config.ParseApacheConfig(apache_config_path="/some/path/to/file")
+    apache_config = apache_parse_obj.parse_config()
+
+or to parse the apache config as a string:
+
+.. code-block:: python
+
+    apache_parse_obj = parse_config.ParseApacheConfig(apache_file_as_string=apache_string_obj)
+    apache_config = apache_parse_obj.parse_config()
 
 Now you can use the apache_config object to manipulate the apache config.
 
-To add or override an existing directive and return the result::
-  apache_config = apache_parse_obj.add_directive(apache_config, "SomeDirectiveName", "SomeDirectiveArguments", "<VirtualHost *:80>")
+To add or override an existing directive and return the result:
+
+.. code-block:: python
+
+    apache_config = apache_parse_obj.add_directive(apache_config, "SomeDirectiveName", "SomeDirectiveArguments", "<VirtualHost *:80>")
 
 
 The code above will add the line "SomeDirectiveName SomeDirectiveArguments" under <VirtualHost \*:80>. If the directive
