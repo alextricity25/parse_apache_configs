@@ -16,7 +16,7 @@ To use:
 
 .. code-block:: python
   
-    import parse_apache_configs import parse_config
+    from parse_apache_configs import parse_config
 
 Parse the apache config via file path, and return a python object representation:
 
@@ -63,10 +63,13 @@ To override the "Order" directive under <Directory "/var/www/example.org">, the 
 
 .. code-block:: python
 
-    apache_config = apache_parse_obj.add_directive(apache_config, "Order", "deny,allow", "<VirtualHost *:80>", "<Directory \"/var/www/example.org\">")
+    apache_config = apache_parse_obj.add_directive(apache_config, "Order", "deny,allow", "<VirtualHost *:80>", "<Directory "/var/www/example.org">")
 
 
-To convert the apache_config object into a printable string::
-  apache_config_string = apache_parse_obj.get_apache_config(apache_config)
+To convert the apache_config object into a printable string:
+
+.. code-block:: python
+
+    apache_config_string = apache_parse_obj.get_apache_config(apache_config)
   print apache_config_string
 
